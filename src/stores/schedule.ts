@@ -27,15 +27,23 @@ const equipment: Equipment[] = [
 ];
 
 const seedScenes: Scene[] = [
-  { id: "s1", code: "A-012", title: "码头交接", day: "2026-10-08", start: "08:00", end: "11:30", talentIds: ["t1", "t3"], locationId: "l1", equipmentIds: ["e1", "e3"], status: "已确认", locked: false },
-  { id: "s2", code: "A-013", title: "厂房追逐", day: "2026-10-08", start: "10:30", end: "13:00", talentIds: ["t1", "t2"], locationId: "l1", equipmentIds: ["e2", "e4"], status: "草稿", locked: false },
-  { id: "s3", code: "B-021", title: "候车厅告别", day: "2026-10-09", start: "15:00", end: "18:30", talentIds: ["t2", "t3"], locationId: "l3", equipmentIds: ["e1"], status: "草稿", locked: false }
+  { id: "s1", code: "A-012", title: "码头交接", storyNo: 12, day: "2026-10-08", start: "08:00", end: "11:30", talentIds: ["t1", "t3"], locationId: "l1", equipmentIds: ["e1", "e3"], status: "已确认", locked: false },
+  { id: "s2", code: "A-013", title: "厂房追逐", storyNo: 13, day: "2026-10-08", start: "10:30", end: "13:00", talentIds: ["t1", "t2"], locationId: "l1", equipmentIds: ["e2", "e4"], status: "草稿", locked: false },
+  { id: "s4", code: "B-022", title: "南站追踪", storyNo: 22, day: "2026-10-08", start: "14:00", end: "15:30", talentIds: ["t3", "t4"], locationId: "l3", equipmentIds: ["e1", "e4"], status: "草稿", locked: false },
+  { id: "s3", code: "B-021", title: "候车厅告别", storyNo: 21, day: "2026-10-09", start: "09:00", end: "12:00", talentIds: ["t2", "t3"], locationId: "l3", equipmentIds: ["e1"], status: "草稿", locked: false }
 ];
 
 function readScenes(): Scene[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw).scenes as Scene[] : structuredClone(seedScenes);
+    if (raw) {
+      const scenes = JSON.parse(raw).scenes as Scene[];
+      // 旧数据迁移：缺剧情序时按存储顺序补号
+      return scenes.map((scene, index) =>
+        scene.storyNo === undefined ? { ...scene, storyNo: index + 1 } : scene
+      );
+    }
+    return structuredClone(seedScenes);
   } catch {
     return structuredClone(seedScenes);
   }
@@ -121,6 +129,25 @@ export const useScheduleStore = defineStore("schedule", () => {
     log("新增场次", `${input.code} ${input.title}`);
   }
 
+  /** 修改场次通告（拍摄日/演员/器材/场地等）。已开拍场次只记录、不允许改通告要素 */
+  function editScene(id: string, patch: Omit<Scene, "id" | "status" | "locked">) {
+    const scene = scenes.value.find((item) => item.id === id);
+    if (!scene) return;
+    if (scene.status === "拍摄中" || scene.status === "已完成") {
+      log("拒改现场场次", `${scene.code} 已开拍，改动留待现场处理`);
+      return;
+    }
+    const changed: string[] = [];
+    if (patch.day !== scene.day) changed.push(`拍摄日 ${scene.day}→${patch.day}`);
+    if (patch.start !== scene.start || patch.end !== scene.end) changed.push(`时间 ${scene.start}-${scene.end}→${patch.start}-${patch.end}`);
+    if (patch.locationId !== scene.locationId) changed.push("场地变更");
+    if (JSON.stringify(patch.talentIds) !== JSON.stringify(scene.talentIds)) changed.push("演员改派");
+    if (JSON.stringify(patch.equipmentIds) !== JSON.stringify(scene.equipmentIds)) changed.push("器材调整");
+    if (patch.storyNo !== scene.storyNo) changed.push(`剧情序 ${scene.storyNo}→${patch.storyNo}`);
+    Object.assign(scene, patch);
+    log("修改场次", `${scene.code}：${changed.join("、") || "无依赖变更"}`);
+  }
+
   function updateStatus(id: string, status: SceneStatus) {
     const scene = scenes.value.find((item) => item.id === id);
     if (!scene || scene.locked) return;
@@ -187,5 +214,5 @@ export const useScheduleStore = defineStore("schedule", () => {
     online.value = value;
   }
 
-  return { scenes, sortedScenes, conflicts, history, versions, role, exemptions, online, draft, talents, locations, equipment, talentNames, equipmentNames, locationName, addScene, updateStatus, toggleLock, moveScene, snapshot, restore, saveDraft, loadDraft, syncDraft, exempt, setOnline };
+  return { scenes, sortedScenes, conflicts, history, versions, role, exemptions, online, draft, talents, locations, equipment, talentNames, equipmentNames, locationName, addScene, editScene, updateStatus, toggleLock, moveScene, snapshot, restore, saveDraft, loadDraft, syncDraft, exempt, setOnline };
 });
