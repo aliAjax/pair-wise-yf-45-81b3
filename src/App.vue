@@ -3,8 +3,10 @@ import { computed } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useScheduleStore } from "./stores/schedule";
+import { useContinuityStore } from "./stores/continuity";
 
 const store = useScheduleStore();
+const ledger = useContinuityStore();
 const route = useRoute();
 const { t } = useI18n();
 const isOnline = computed({
@@ -22,6 +24,7 @@ const isOnline = computed({
       </div>
       <nav>
         <RouterLink to="/" :class="{ active: route.name === 'schedule' }">◫ {{ t("schedule") }}</RouterLink>
+        <RouterLink to="/continuity" :class="{ active: route.name === 'continuity' }">⇝ 连续性账 <em>{{ ledger.pendingHandovers.length }}</em></RouterLink>
         <RouterLink to="/conflicts" :class="{ active: route.name === 'conflicts' }">△ {{ t("conflicts") }} <em>{{ store.conflicts.length }}</em></RouterLink>
         <RouterLink to="/history" :class="{ active: route.name === 'history' }">↺ {{ t("history") }}</RouterLink>
       </nav>

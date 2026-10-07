@@ -27,9 +27,9 @@ const equipment: Equipment[] = [
 ];
 
 const seedScenes: Scene[] = [
-  { id: "s1", code: "A-012", title: "码头交接", day: "2026-10-08", start: "08:00", end: "11:30", talentIds: ["t1", "t3"], locationId: "l1", equipmentIds: ["e1", "e3"], status: "已确认", locked: false },
-  { id: "s2", code: "A-013", title: "厂房追逐", day: "2026-10-08", start: "10:30", end: "13:00", talentIds: ["t1", "t2"], locationId: "l1", equipmentIds: ["e2", "e4"], status: "草稿", locked: false },
-  { id: "s3", code: "B-021", title: "候车厅告别", day: "2026-10-09", start: "15:00", end: "18:30", talentIds: ["t2", "t3"], locationId: "l3", equipmentIds: ["e1"], status: "草稿", locked: false }
+  { id: "s1", code: "A-012", title: "码头交接", storyOrder: 1, day: "2026-10-08", start: "08:00", end: "11:30", talentIds: ["t1", "t3"], locationId: "l1", equipmentIds: ["e1", "e3"], status: "已确认", locked: false },
+  { id: "s2", code: "A-013", title: "厂房追逐", storyOrder: 2, day: "2026-10-08", start: "10:30", end: "13:00", talentIds: ["t1", "t2"], locationId: "l1", equipmentIds: ["e2", "e4"], status: "草稿", locked: false },
+  { id: "s3", code: "B-021", title: "候车厅告别", storyOrder: 3, day: "2026-10-09", start: "15:00", end: "18:30", talentIds: ["t2", "t3"], locationId: "l3", equipmentIds: ["e1"], status: "草稿", locked: false }
 ];
 
 function readScenes(): Scene[] {
@@ -82,8 +82,11 @@ export const useScheduleStore = defineStore("schedule", () => {
   const draft = ref<OfflineDraft | null>(null);
 
   const talentNames = (ids: string[]) => ids.map((id) => talents.find((item) => item.id === id)?.name ?? id);
+  const talentName = (id: string) => talents.find((item) => item.id === id)?.name ?? id;
   const locationName = (id: string) => locations.find((item) => item.id === id)?.name ?? id;
   const equipmentNames = (ids: string[]) => ids.map((id) => equipment.find((item) => item.id === id)?.name ?? id);
+  const sceneCode = (id: string) => scenes.value.find((item) => item.id === id)?.code ?? id;
+  const sceneTitle = (id: string) => scenes.value.find((item) => item.id === id)?.title ?? id;
 
   const conflicts = computed<Conflict[]>(() => {
     const result: Conflict[] = [];
@@ -119,6 +122,13 @@ export const useScheduleStore = defineStore("schedule", () => {
   function addScene(input: Omit<Scene, "id" | "status" | "locked">) {
     scenes.value.push({ ...input, id: crypto.randomUUID(), status: "草稿", locked: false });
     log("新增场次", `${input.code} ${input.title}`);
+  }
+
+  function updateScene(id: string, changes: Partial<Omit<Scene, "id">>) {
+    const scene = scenes.value.find((item) => item.id === id);
+    if (!scene || scene.locked) return;
+    Object.assign(scene, changes);
+    log("修改场次", `${scene.code} ${scene.title}`);
   }
 
   function updateStatus(id: string, status: SceneStatus) {
@@ -187,5 +197,5 @@ export const useScheduleStore = defineStore("schedule", () => {
     online.value = value;
   }
 
-  return { scenes, sortedScenes, conflicts, history, versions, role, exemptions, online, draft, talents, locations, equipment, talentNames, equipmentNames, locationName, addScene, updateStatus, toggleLock, moveScene, snapshot, restore, saveDraft, loadDraft, syncDraft, exempt, setOnline };
+  return { scenes, sortedScenes, conflicts, history, versions, role, exemptions, online, draft, talents, locations, equipment, talentNames, talentName, equipmentNames, locationName, sceneCode, sceneTitle, addScene, updateScene, updateStatus, toggleLock, moveScene, snapshot, restore, saveDraft, loadDraft, syncDraft, exempt, setOnline };
 });
